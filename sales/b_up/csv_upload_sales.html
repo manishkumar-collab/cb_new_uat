@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Requests CSV Upload</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; padding: 20px; }
+        .upload-container { max-width: 900px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .file-upload { border: 2px dashed #ccc; border-radius: 5px; padding: 20px; text-align: center; margin: 20px 0; transition: all 0.3s; cursor: pointer; }
+        .file-upload:hover { border-color: #007bff; background-color: #f8f9fa; }
+        .file-upload.dragover { border-color: #007bff; background-color: #e9f7fe; }
+        .progress-container, .result-container, .error-container, .debug-container { display: none; margin-top: 20px; }
+        .debug-container { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; }
+        .debug-container pre { background-color: #e9ecef; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; }
+        .download-btn { background-color: #28a745; border-color: #28a745; }
+        .download-btn:hover { background-color: #218838; border-color: #1e7e34; }
+        .user-info { background-color: #e9f7fe; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .user-table { max-height: 200px; overflow-y: auto; }
+        .date-info { background-color: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="upload-container">
+        <h2 class="text-center mb-4">Sales Requests CSV Upload</h2>
+        
+        <div class="alert alert-info">
+            <strong>Note:</strong> Please ensure your CSV file follows the format provided below.
+        </div>
+        
+        <div class="d-grid gap-2 d-md-flex justify-content-md-center mb-4">
+            <a href="download_csv_format.php" class="btn download-btn">
+                <i class="fas fa-download me-2"></i>Download CSV Format
+            </a>
+        </div>
+        
+        <div class="date-info">
+            <h5><i class="fas fa-calendar-alt me-2"></i>Date Format Information:</h5>
+            <p>Enter the date in YYYY-MM-DD format in the date column. For example: 2026-01-27</p>
+            <p class="mb-0"><strong>Important:</strong> This field is now required. For old sales requests, use the same date when the request was created. The system will also accept YYYY/MM/DD format and automatically convert it.</p>
+        </div>
+        
+        <div class="user-info">
+            <h5>Available User IDs:</h5>
+            <div class="table-responsive user-table">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Name</th>
+                            <th>Username</th>
+                            <th>Manager ID</th>
+                            <th>Head ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>41</td>
+                            <td>Vikas</td>
+                            <td>CY2015</td>
+                            <td>22</td>
+                            <td>19</td>
+                        </tr>
+                        <tr>
+                            <td>22</td>
+                            <td>Shubham Sehgal</td>
+                            <td>shubham@coveryou.in</td>
+                            <td>NULL</td>
+                            <td>19</td>
+                        </tr>
+                        <tr>
+                            <td>21</td>
+                            <td>Sachin Pandit</td>
+                            <td>sachin</td>
+                            <td>20</td>
+                            <td>19</td>
+                        </tr>
+                        <tr>
+                            <td>25</td>
+                            <td>Mohsin Khan</td>
+                            <td>mohsin</td>
+                            <td>22</td>
+                            <td>19</td>
+                        </tr>
+                        <tr>
+                            <td>26</td>
+                            <td>Sanjay Patel</td>
+                            <td>sanjay</td>
+                            <td>22</td>
+                            <td>19</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="mb-0"><small>These are just some examples. You can use any valid user ID.</small></p>
+        </div>
+        
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="csvFile" class="form-label">Select CSV File</label>
+                <input type="file" class="form-control" id="csvFile" name="csvFile" accept=".csv" required>
+            </div>
+            
+            <div class="file-upload" id="dropZone">
+                <p>Drag and drop CSV file here or click to select file</p>
+            </div>
+            
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary w-100" id="uploadBtn">Upload</button>
+            </div>
+        </form>
+        
+        <div class="progress-container">
+            <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+            </div>
+        </div>
+        
+        <div class="result-container">
+            <div class="alert alert-success">
+                <h5>Upload Successful!</h5>
+                <p id="successMessage"></p>
+            </div>
+        </div>
+        
+        <div class="error-container">
+            <div class="alert alert-danger">
+                <h5>Error!</h5>
+                <p id="errorMessage"></p>
+                <div id="errorDetails"></div>
+            </div>
+        </div>
+
+        <div class="debug-container" id="debugContainer">
+            <h5>Debug Information (to help identify errors):</h5>
+            <pre id="debugInfo"></pre>
+        </div>
+        
+        <div class="sample-format">
+            <h5>CSV Format:</h5>
+            <pre>user_id,date,quotation_number,ccs_lead_id,name,mobile_no,vehicle_number,rm_name,leader_name,premium,premium_wo_gst,multi_single,wheeler,city,state,cc,register_year,vehicle_age,tp_status,tp_premium,odsy,odmy,category,fuel_type,make,model,insurance_company,deal_type,payment_screenshot_attached,remarks</pre>
+            <p><strong>Example:</strong></p>
+            <pre>41,2026-01-27,Q753726,L73878249,Manish Kushwaha,07827942272,DL7CV0121,Vikas,Shubham,118.00,100.00,Multi,2,Gurgaon,Haryana,180,2023,0,N/A,,,,Bike,Petrol,,CoverYou,Third Party,Yes,ok</pre>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('csvFile');
+            const uploadForm = document.getElementById('uploadForm');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const progressContainer = document.querySelector('.progress-container');
+            const progressBar = document.querySelector('.progress-bar');
+            const resultContainer = document.querySelector('.result-container');
+            const errorContainer = document.querySelector('.error-container');
+            const debugContainer = document.getElementById('debugContainer');
+            const debugInfo = document.getElementById('debugInfo');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorDetails = document.getElementById('errorDetails');
+            
+            // File drag and drop events
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if (e.data.files.length) {
+                    fileInput.files = e.data.files;
+                }
+            });
+            
+            // Form submission
+            uploadForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!fileInput.files.length) {
+                    showError('Please select a CSV file.');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('csvFile', fileInput.files[0]);
+                
+                progressContainer.style.display = 'block';
+                resultContainer.style.display = 'none';
+                errorContainer.style.display = 'none';
+                debugContainer.style.display = 'none';
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
+                
+                const xhr = new XMLHttpRequest();
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percentComplete + '%';
+                        progressBar.setAttribute('aria-valuenow', percentComplete);
+                        progressBar.textContent = percentComplete + '%';
+                    }
+                });
+                
+                xhr.addEventListener('load', () => {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        
+                        // Always show debug information
+                        if (response.debug_info) {
+                            debugInfo.textContent = JSON.stringify(response.debug_info, null, 2);
+                            debugContainer.style.display = 'block';
+                        }
+
+                        if (response.success) {
+                            showSuccess(response.message);
+                            if (response.errors && response.errors.length > 0) {
+                                let errorHtml = '<h6>Detailed Errors:</h6><ul>';
+                                response.errors.forEach(err => errorHtml += `<li>${err}</li>`);
+                                errorHtml += '</ul>';
+                                errorDetails.innerHTML = errorHtml;
+                                errorContainer.style.display = 'block'; // Show error box for errors as well
+                            }
+                        } else {
+                            showError(response.message);
+                        }
+                    } else {
+                        showError('Server error: ' + xhr.status);
+                    }
+                    
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = 'Upload';
+                    fileInput.value = '';
+                });
+                
+                xhr.addEventListener('error', () => {
+                    showError('Network error. Please try again later.');
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = 'Upload';
+                    fileInput.value = '';
+                });
+                
+                xhr.open('POST', 'upload_sales_csv.php', true);
+                xhr.send(formData);
+            });
+            
+            function showSuccess(message) {
+                successMessage.textContent = message;
+                resultContainer.style.display = 'block';
+                progressContainer.style.display = 'none';
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorContainer.style.display = 'block';
+                progressContainer.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
